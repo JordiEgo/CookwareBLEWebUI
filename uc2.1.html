@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UC2.1 · CW-Smartphone — Native Web BT</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0f172a;
+      --surface:  #1e293b;
+      --surface2: #263548;
+      --border:   #334155;
+      --text:     #f1f5f9;
+      --muted:    #94a3b8;
+      --accent:   #3b82f6;
+      --green:    #22c55e;
+      --red:      #ef4444;
+      --orange:   #f97316;
+      --purple:   #7c3aed;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text);
+      padding: 12px; max-width: 520px; margin: 0 auto; min-height: 100vh;
+    }
+    .page-header {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 14px; margin-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .btn-back {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--muted); border-radius: 7px; padding: 6px 12px;
+      cursor: pointer; font-size: 13px; text-decoration: none; white-space: nowrap;
+    }
+    .btn-back:hover { background: var(--surface2); color: var(--text); }
+    .page-title { font-size: 1.05em; font-weight: 700; flex: 1; }
+    .uc-badge {
+      font-size: 0.68em; background: #1d4ed820; color: #93c5fd;
+      border: 1px solid #3b82f640; padding: 3px 9px; border-radius: 20px; white-space: nowrap;
+    }
+    .wbt-badge {
+      font-size: 0.65em; background: #1d4ed820; color: #60a5fa;
+      border: 1px solid #3b82f640; padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+    }
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px; margin-bottom: 12px;
+    }
+    .card-title {
+      font-size: 0.72em; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); margin-bottom: 10px;
+    }
+    input[type=text], input[type=number], select {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text); border-radius: 7px;
+      padding: 7px 10px; font-size: 13px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--accent); }
+    .field-label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .field-input  { width: 100%; }
+    .btn {
+      border: none; cursor: pointer; border-radius: 8px;
+      padding: 8px 14px; font-size: 13px; font-weight: 600;
+      transition: opacity 0.15s; white-space: nowrap;
+    }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn:hover:not(:disabled) { opacity: 0.85; }
+    .btn-primary  { background: var(--accent);  color: #fff; }
+    .btn-success  { background: var(--green);   color: #fff; }
+    .btn-danger   { background: var(--red);     color: #fff; }
+    .btn-purple   { background: var(--purple);  color: #fff; }
+    .btn-outline  { background: transparent; border: 1px solid var(--border); color: var(--text); }
+    .btn-lg { padding: 14px; font-size: 15px; }
+    .btn-sm { padding: 5px 10px; font-size: 12px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+    .dot-ok   { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-idle { background: var(--muted); }
+    .fields-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .field-full  { grid-column: 1 / -1; }
+    .hex-preview {
+      background: #0a0f1a; border: 1px solid var(--border);
+      border-radius: 6px; padding: 6px 10px;
+      font-family: monospace; font-size: 11px; color: #93c5fd;
+      letter-spacing: 1px; word-break: break-all; margin-bottom: 10px;
+    }
+    .cond-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .cond-item { background: var(--bg); border-radius: 8px; padding: 8px; text-align: center; }
+    .cond-val  { font-size: 1.1em; font-weight: 700; color: var(--text); }
+    .cond-key  { font-size: 0.68em; color: var(--muted); margin-top: 2px; }
+    .temp-big {
+      font-size: 3em; font-weight: 700; text-align: center;
+      color: #fed7aa; padding: 8px 0 4px; font-variant-numeric: tabular-nums;
+    }
+    .temp-label { text-align: center; font-size: 0.75em; color: var(--muted); margin-bottom: 12px; }
+    details > summary {
+      cursor: pointer; list-style: none; color: var(--muted);
+      font-size: 12px; padding: 4px 0; user-select: none;
+    }
+    details > summary::before { content: '▶ '; font-size: 10px; }
+    details[open] > summary::before { content: '▼ '; }
+    details > summary::-webkit-details-marker { display: none; }
+    .subfields {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 8px; padding: 8px;
+      background: var(--bg); border-radius: 7px;
+    }
+    .subfields-title { font-size: 11px; width: 100%; margin-bottom: 2px; }
+    .step-card {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 9px; padding: 12px; margin-bottom: 8px;
+    }
+    .step-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent)40; }
+    .step-card.done   { border-color: var(--green)60; opacity: 0.6; }
+    .field-row { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+    .field-row label { min-width: 130px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+    pre#logBox {
+      background: var(--bg); border-radius: 6px; padding: 8px;
+      font-family: monospace; font-size: 11px; line-height: 1.6;
+      height: 110px; overflow-y: auto; color: var(--muted);
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .row-between { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+    .warn-banner {
+      background: #7c2d1220; border: 1px solid #f9731640;
+      color: #fcd34d; border-radius: 10px; padding: 12px 14px;
+      font-size: 12px; margin-bottom: 12px; line-height: 1.7;
+    }
+    @keyframes cw-blink { 0%,100%{opacity:1} 50%{opacity:0.15} }
+    .cw-blink { animation: cw-blink 0.8s ease-in-out infinite; }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<div class="page-header">
+  <a href="index.html" class="btn-back">← Main</a>
+  <span class="page-title">📱 CW-Smartphone</span>
+  <span class="uc-badge">USE CASE 2.1 (RP at CW)</span>
+  <span class="wbt-badge">🔵 Native Web BT</span>
+</div>
+
+<!-- ── BT unavailable warning ─────────────────────────────────────────────── -->
+<div id="nobtWarn" class="warn-banner" style="display:none">
+  ⚠️ <strong>Web Bluetooth not supported</strong> in this browser.<br>
+  Use <strong>Chrome / Edge / Opera</strong> on desktop or Android (not iOS).<br>
+  Requires <code>https://</code> or <code>localhost</code>. Quick start: <code>python3 -m http.server 8080</code>
+</div>
+
+<!-- ── Scan / Connect ─────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">🔗 Cookware Connection</div>
+  <div class="row-between">
+    <div class="row">
+      <button id="connectBtn" class="btn btn-primary">🔵 Request Device &amp; Connect</button>
+      <button id="disconnectBtn" class="btn btn-outline btn-sm">Disconnect</button>
+    </div>
+    <div class="row" style="gap:6px; margin-top:8px">
+      <span id="connDot" class="dot dot-idle"></span>
+      <span id="connLabel" style="font-size:12px; color:var(--muted)">disconnected</span>
+      <span id="notifStatus" style="font-size:11px; color:var(--muted); margin-left:6px"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Induction Cooktop SVG ──────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">🍳 Induction Cooktop — 2 Cooking Zones</div>
+  <div style="background:#0a0f1a; border-radius:10px; overflow:hidden; border:1px solid #1e293b">
+    <svg id="cooktopSvg" viewBox="0 0 360 190" xmlns="http://www.w3.org/2000/svg"
+         style="width:100%; height:auto; display:block">
+      <rect x="3" y="3" width="354" height="184" rx="16" fill="#0d1117" stroke="#1f2937" stroke-width="1.5"/>
+      <defs>
+        <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M20 0L0 0 0 20" fill="none" stroke="#ffffff06" stroke-width="0.5"/>
+        </pattern>
+      </defs>
+      <rect x="3" y="3" width="354" height="184" rx="16" fill="url(#grid)"/>
+      <!-- Zone 1 (left) — cookware connects here -->
+      <circle id="z1-r3" cx="100" cy="94" r="67" fill="none" stroke="#f97316" stroke-width="2.5" opacity="0.55"/>
+      <circle id="z1-r2" cx="100" cy="94" r="50" fill="none" stroke="#ef4444" stroke-width="2"   opacity="0.45"/>
+      <circle id="z1-r1" cx="100" cy="94" r="32" fill="none" stroke="#dc2626" stroke-width="1.5" opacity="0.35" stroke-dasharray="6 4"/>
+      <text x="100" y="89"  text-anchor="middle" fill="#fdba74" font-size="13" font-weight="700" font-family="system-ui">CZ 1</text>
+      <text id="z1tempSvg" x="100" y="105" text-anchor="middle" fill="#f97316" font-size="11" font-family="monospace">—</text>
+      <circle id="z1dot" cx="100" cy="168" r="5" fill="#334155"/>
+      <text id="z1statusText" x="100" y="182" text-anchor="middle" fill="#4b5563" font-size="8" font-family="system-ui">no device</text>
+      <!-- Separator -->
+      <line x1="182" y1="18" x2="182" y2="162" stroke="#1f2937" stroke-width="1" stroke-dasharray="4 6"/>
+      <!-- Zone 2 (right) — inactive -->
+      <circle cx="264" cy="94" r="67" fill="none" stroke="#374151" stroke-width="2.5" opacity="0.4"/>
+      <circle cx="264" cy="94" r="50" fill="none" stroke="#2d3748" stroke-width="2"   opacity="0.35"/>
+      <circle cx="264" cy="94" r="32" fill="none" stroke="#1e293b" stroke-width="1.5" opacity="0.3" stroke-dasharray="6 4"/>
+      <text x="264" y="89"  text-anchor="middle" fill="#4b5563" font-size="13" font-weight="700" font-family="system-ui">CZ 2</text>
+      <text x="264" y="105" text-anchor="middle" fill="#374151" font-size="10" font-family="system-ui">inactive</text>
+      <text x="182" y="183" text-anchor="middle" fill="#1e293b" font-size="7" letter-spacing="3" font-weight="600" font-family="system-ui">SMART INDUCTION</text>
+    </svg>
+  </div>
+</div>
+
+<!-- ── CZ Capabilities (0x2C29) ───────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
+    ⚙️ CZ Capabilities (0x2C29)
+    <button id="toggleCapBtn" class="btn btn-outline btn-sm">▼ Show</button>
+  </div>
+  <div id="capPanel" style="display:none">
+    <div class="fields-grid" style="margin-bottom:8px">
+      <div>
+        <label class="field-label">Power Technology</label>
+        <select id="capPowerTech" class="field-input">
+          <option value="0">0 — Unknown</option>
+          <option value="1" selected>1 — Induction</option>
+          <option value="2">2 — Gas</option>
+          <option value="3">3 — Radiant</option>
+          <option value="4">4 — Refrigeration</option>
+          <option value="255">0xFF — Mfr.Specific</option>
+        </select>
+      </div>
+      <div>
+        <label class="field-label">Num Steps</label>
+        <input id="capNumSteps" type="number" value="10" min="0" max="65535" class="field-input"/>
+      </div>
+    </div>
+    <div style="margin-bottom:8px">
+      <div style="font-size:11px; color:var(--muted); margin-bottom:5px">Capability Flags:</div>
+      <div class="row" style="gap:10px; flex-wrap:wrap">
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px"><input type="checkbox" id="capBit0"> Aggregation</label>
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px"><input type="checkbox" id="capBit1" checked> Power ctrl</label>
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px"><input type="checkbox" id="capBit2"> Temp ctrl</label>
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px"><input type="checkbox" id="capBit3"> Humidity</label>
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px"><input type="checkbox" id="capBit4"> Blower</label>
+        <label style="font-size:12px; display:flex; align-items:center; gap:4px"><input type="checkbox" id="capBit5"> Mfr.spec</label>
+      </div>
+    </div>
+    <details open>
+      <summary>Optional capability fields</summary>
+      <div style="margin-top:8px">
+        <div id="capPowerFields" class="subfields" style="display:none">
+          <span class="subfields-title" style="color:var(--orange)">⚡ Power fields (bit1)</span>
+          <label style="font-size:12px">Nominal Power (W):<br/><input id="capNomPower"  type="number" value="20000" min="0" max="16777215" style="width:90px; margin-top:2px"/></label>
+          <label style="font-size:12px">Boost (%):<br/><input id="capBoost"      type="number" value="0"     min="0" max="255"     style="width:60px; margin-top:2px"/></label>
+          <label style="font-size:12px">Min Power:<br/><input id="capMinPower"   type="number" value="200"   min="0" max="65535"   style="width:80px; margin-top:2px"/></label>
+        </div>
+        <div id="capTempFields" class="subfields" style="display:none">
+          <span class="subfields-title" style="color:#f87171">🌡 Temp fields (bit2)</span>
+          <label style="font-size:12px">Max Temp (×0.1°C):<br/><input id="capMaxTemp" type="number" value="3000" style="width:90px; margin-top:2px"/></label>
+          <label style="font-size:12px">Min Temp (×0.1°C):<br/><input id="capMinTemp" type="number" value="200"  style="width:90px; margin-top:2px"/></label>
+        </div>
+        <div id="capBlowerFields" class="subfields" style="display:none">
+          <span class="subfields-title" style="color:#60a5fa">💨 Blower field (bit4)</span>
+          <label style="font-size:12px">Max Blower Airflow:<br/><input id="capMaxBlower" type="number" value="100" min="0" max="65535" style="width:80px; margin-top:2px"/></label>
+        </div>
+      </div>
+    </details>
+    <div class="hex-preview" id="capHexPreview" style="margin-top:8px">—</div>
+  </div>
+  <button id="sendCapBtn" class="btn btn-purple" style="width:100%; margin-top:4px">⚙️ Write CZ Capabilities to Cookware</button>
+</div>
+
+<!-- ── Local Recipe Selector ─────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
+    📋 Local Recipe
+    <button id="toggleRecipeBtn" class="btn btn-outline btn-sm">▼ Show</button>
+  </div>
+  <div id="recipePanel" style="display:none">
+    <div class="row" style="margin-bottom:8px">
+      <input id="recipeFileInput" type="file" accept=".json"
+             style="flex:1; font-size:11px; background:var(--surface2); border:1px solid var(--border);
+                    border-radius:7px; padding:5px 8px; color:var(--muted)"/>
+      <button id="clearRecipeBtn" class="btn btn-outline btn-sm">✕ Clear</button>
+    </div>
+    <div id="recipePickerRow" style="display:none; margin-bottom:8px">
+      <div class="row">
+        <label style="font-size:12px; color:var(--muted); min-width:60px">Recipe</label>
+        <select id="recipeSelect" style="flex:1"><option disabled selected>— select a recipe —</option></select>
+      </div>
+    </div>
+    <div id="recipeSummary" style="display:none; background:var(--surface2); border:1px solid var(--border);
+         border-radius:8px; padding:10px">
+      <div style="font-size:11px; color:var(--muted)">Recipe loaded</div>
+      <div id="recipeName" style="font-size:15px; font-weight:700; margin:4px 0">—</div>
+      <div id="stepCount"  style="font-size:11px; color:var(--muted)">— steps</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Step Runner ────────────────────────────────────────────────────────── -->
+<div class="card" id="stepRunnerCard" style="display:none">
+  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
+    ▶ Step Runner
+    <div class="row" style="gap:6px">
+      <span id="stepRunnerDot" class="dot dot-idle"></span>
+      <span id="stepRunnerStatus" style="font-size:11px; color:var(--muted)">idle</span>
+    </div>
+  </div>
+  <div id="currentStepCard" class="step-card" style="margin-bottom:10px">
+    <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px">
+      <div>
+        <div style="font-size:10px; color:var(--muted)">CURRENT STEP</div>
+        <div id="csStepNum"  style="font-size:26px; font-weight:700; line-height:1; color:var(--accent)">—</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:10px; color:var(--muted)">PROCESS TYPE</div>
+        <div id="csProcType" style="font-size:13px; font-weight:600">—</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:8px">
+      <div><div style="font-size:9px; color:var(--muted)">TARGET TEMP</div><div id="csTargetTemp" style="font-size:18px; font-weight:700">—°C</div></div>
+      <div><div style="font-size:9px; color:var(--muted)">DURATION</div><div id="csDuration" style="font-size:18px; font-weight:700">—s</div></div>
+      <div><div style="font-size:9px; color:var(--muted)">FLAGS</div><div id="csFlags" style="font-size:12px; font-family:monospace">0x—</div></div>
+    </div>
+    <div id="csUserAction" style="display:none; background:#92400e30; border:1px solid #f9731640;
+         border-radius:6px; padding:6px 10px; font-size:12px; color:#fcd34d; margin-bottom:6px">
+      💬 <span id="csUserActionMsg"></span>
+    </div>
+    <div style="background:var(--border); border-radius:4px; height:6px; overflow:hidden; margin-bottom:6px">
+      <div id="csProgressBar" style="height:100%; width:0%; background:var(--accent); transition:width 1s linear"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:10px; color:var(--muted)">
+      <span id="csElapsed">0s elapsed</span>
+      <span id="csRemainingTime">—s remaining</span>
+    </div>
+  </div>
+  <div class="row" style="gap:8px; margin-bottom:8px">
+    <button id="sendStepBtn"   class="btn btn-primary" style="flex:1">📤 Send Recipe Params + START</button>
+    <button id="nextStepBtn"   class="btn btn-success btn-sm">Next ▶</button>
+    <button id="stopRunnerBtn" class="btn btn-danger  btn-sm">■ Stop</button>
+  </div>
+  <details>
+    <summary>All steps (click to expand)</summary>
+    <div id="allStepsList" style="margin-top:8px"></div>
+  </details>
+</div>
+
+<!-- ── Recipe Step Params (0x2C27) ────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
+    📋 Recipe Step Params (0x2C27)
+    <button id="toggleRpBtn" class="btn btn-outline btn-sm">▼ Show</button>
+  </div>
+  <div id="rpPanel" style="display:none">
+    <div style="font-size:11px; color:var(--muted); margin-bottom:8px">Default: Preheat to 180 °C — max 10 min</div>
+    <div class="fields-grid">
+      <div>
+        <label class="field-label">Flags (hex)</label>
+        <input id="rpFlags" type="text" value="0008" placeholder="e.g. 0048" class="field-input" style="font-family:monospace"/>
+      </div>
+      <div>
+        <label class="field-label">Step Index</label>
+        <input id="rpStepIdx" type="number" value="1" min="0" class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label">Process Type</label>
+        <input id="rpProcType" type="number" value="1" min="0" max="255" class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label">Duration (s)</label>
+        <input id="rpDuration" type="number" value="600" placeholder="—" class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label">Temperature (×0.1°C)</label>
+        <input id="rpTemp" type="number" value="1800" placeholder="1800=180.0°C" class="field-input"/>
+      </div>
+      <div>
+        <label class="field-label">Term. Condition (hex)</label>
+        <input id="rpTermCond" type="text" value="" placeholder="e.g. 8003" class="field-input" style="font-family:monospace"/>
+      </div>
+    </div>
+    <button id="sendRecipeBtn" class="btn btn-primary" style="width:100%">📋 Write Recipe Params to Cookware</button>
+  </div>
+</div>
+
+<!-- ── Desired Conditions (0x2C2A) ───────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between; align-items:center">
+    ✏️ Write Desired Conditions (0x2C2A)
+    <button id="toggleDesiredBtn" class="btn btn-outline btn-sm">▼ Show</button>
+  </div>
+  <div id="desiredPanel" style="display:none">
+    <div class="field-row"><label>Flags (hex)</label><input id="dcFlags" type="text" value="0002" placeholder="0002" style="flex:1; font-family:monospace"/></div>
+    <div class="field-row"><label>Temperature (×0.1°C)</label><input id="dcTemp"   type="number" placeholder="e.g. 1800=180°C" style="flex:1"/></div>
+    <div class="field-row"><label>Power (×0.1%, 1000=100%)</label><input id="dcPower"  type="number" placeholder="e.g. 1000=100%" max="3550" style="flex:1"/></div>
+    <div class="field-row"><label>Blower Speed</label><input id="dcBlower" type="number" placeholder="—" style="flex:1"/></div>
+    <div class="row" style="margin-top:6px">
+      <button id="writeDesiredBtn" class="btn btn-primary btn-sm">Write Desired</button>
+      <span id="desiredStatus" style="font-size:11px; color:var(--muted)">—</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Recipe Control (0x2C26) ───────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">▶ Recipe Control (0x2C26)</div>
+  <div class="row" style="gap:12px">
+    <button id="startBtn" class="btn btn-success btn-lg" style="flex:1">▶ START</button>
+    <button id="stopBtn"  class="btn btn-danger  btn-lg" style="flex:1">■ STOP</button>
+  </div>
+</div>
+
+<!-- ── Live Values ──────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">📊 Live Values — BLE Notifications</div>
+
+  <!-- Cookware State banner -->
+  <div id="cwStateBanner" style="display:flex; align-items:center; gap:10px; background:var(--surface2);
+       border:1px solid var(--border); border-radius:8px; padding:10px 12px; margin-bottom:12px">
+    <span id="cwStateDot" style="width:14px; height:14px; border-radius:50%; background:#475569;
+           display:inline-block; flex-shrink:0; transition:background 0.3s;"></span>
+    <div style="flex:1">
+      <div style="font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:0.06em">Cookware State</div>
+      <div id="cwStateLabel" style="font-size:14px; font-weight:700; color:var(--muted)">Disconnected / Advertising</div>
+      <div id="cwActionMsg"  style="display:none; font-size:13px; font-weight:600; color:#f97316; margin-top:3px"></div>
+    </div>
+    <div id="cwStateDesc" style="font-size:11px; color:var(--muted); text-align:right">Blinking Blue · not connected</div>
+  </div>
+
+  <div class="temp-big" id="targetTempDisplay" style="color:#93c5fd; font-size:1.5em; margin-bottom:0">—</div>
+  <div class="temp-label" style="margin-bottom:0; color:#93c5fd">Target Temp</div>
+  <div class="temp-big" id="tempDisplay">—</div>
+  <div class="temp-label">Temperature (Actual)</div>
+
+  <div class="cond-grid">
+    <div class="cond-item"><div class="cond-val" id="condDesiredPower">—</div><div class="cond-key">Desired Power Level</div></div>
+    <div class="cond-item"><div class="cond-val" id="condTemp">—</div><div class="cond-key">Temp (°C)</div></div>
+    <div class="cond-item"><div class="cond-val" id="stepStatus">—</div><div class="cond-key">Step Status</div></div>
+    <div class="cond-item"><div class="cond-val" id="stepRemaining">—</div><div class="cond-key">Remaining</div></div>
+  </div>
+
+  <!-- Desired Conditions received via BLE -->
+  <div style="margin-top:12px; border-top:1px solid var(--border); padding-top:10px">
+    <div style="font-size:11px; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.06em">
+      Desired Conditions (notification 0x2C2A)
+    </div>
+    <div id="desiredDisplay" style="font-family:monospace; font-size:12px; color:#93c5fd; line-height:1.7">—</div>
+  </div>
+</div>
+
+<!-- ── Log ──────────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between">
+    🖥 Log
+    <button onclick="$('logBox').textContent=''"
+            style="background:none; border:none; color:var(--muted); cursor:pointer; font-size:11px">clear</button>
+  </div>
+  <pre id="logBox">Ready.</pre>
+</div>
+
+<script>
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function log(msg, err = false) {
+  const box = $('logBox');
+  const ts  = new Date().toLocaleTimeString();
+  box.textContent += `[${ts}] ${err ? '[ERR] ' : ''}${msg}\n`;
+  const lines = box.textContent.split('\n');
+  if (lines.length > 300) box.textContent = lines.slice(-300).join('\n');
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── UUIDs ─────────────────────────────────────────────────────────────────────
+const CZ_SVC   = '00008ff8-0000-1000-8000-00805f9b34fb'; // Cooking Zone Service
+const CZS_SVC  = '00008ff7-0000-1000-8000-00805f9b34fb'; // Cookware Service
+const CZS_NEW  = '0000185d-0000-1000-8000-00805f9b34fb'; // Cookware Service (new)
+
+const UUID_CWD_DESC    = '00008ff6-0000-1000-8000-00805f9b34fb'; // Cookware Description
+const UUID_CWD_DESC2   = '00002c25-0000-1000-8000-00805f9b34fb'; // Cookware Description (alt)
+const UUID_CZ_CAP      = '00002c29-0000-1000-8000-00805f9b34fb'; // CZ Capabilities
+const UUID_DESIRED     = '00002c2a-0000-1000-8000-00805f9b34fb'; // CZ Desired Cooking Conditions
+const UUID_RECIPE_PAR  = '00002c27-0000-1000-8000-00805f9b34fb'; // Recipe Parameters
+const UUID_STEP_STATUS = '00002c28-0000-1000-8000-00805f9b34fb'; // Cooking Step Status
+const UUID_SENSOR_DATA = '00002c2c-0000-1000-8000-00805f9b34fb'; // Cookware Sensor Data
+const UUID_RECIPE_CTRL = '00002c26-0000-1000-8000-00805f9b34fb'; // Recipe Control
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let device = null, gatt = null, connected = false;
+let cwDescChar = null, capChar = null, recipeParChar = null;
+let desiredChar = null, recipeCtrlChar = null;
+let stepStatusChar = null, sensorChar = null;
+
+let recipeData     = null;
+let loadedSteps    = [];
+let currentStepIdx = 0;
+let runnerActive   = false;
+let stepStartTime  = null;
+let stepTimerHandle = null;
+let cwState        = 'disconnected';
+
+// ── Characteristic helpers ─────────────────────────────────────────────────────
+async function findChar(charUuid, serviceOrder = [CZ_SVC, CZS_SVC, CZS_NEW]) {
+  for (const svcUuid of serviceOrder) {
+    try {
+      const svc  = await gatt.getPrimaryService(svcUuid);
+      const char = await svc.getCharacteristic(charUuid);
+      return char;
+    } catch (_) {}
+  }
+  throw new Error(`Char ${charUuid.slice(4, 8).toUpperCase()} not found`);
+}
+
+async function writeChar(char, buf) {
+  if (char.properties.write) {
+    await char.writeValueWithResponse(buf);
+  } else {
+    await char.writeValueWithoutResponse(buf);
+  }
+}
+
+// ── Connect ───────────────────────────────────────────────────────────────────
+$('connectBtn').addEventListener('click', async () => {
+  $('connectBtn').disabled = true;
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [
+        { namePrefix: 'EGO' },
+        { services: [CZ_SVC] },
+        { services: [CZS_NEW] },
+      ],
+      optionalServices: [CZ_SVC, CZS_SVC, CZS_NEW],
+    });
+
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+    log(`Device: ${device.name ?? device.id}`);
+
+    gatt = await device.gatt.connect();
+    log('GATT connected');
+
+    // --- Discover all CZS/CZ characteristics using findChar (tries all services) ---
+    const charDefs = [
+      { key: 'cap',        uuid: UUID_CZ_CAP,      label: 'CZ Capabilities  (0x2C29)', notify: false },
+      { key: 'recipePar', uuid: UUID_RECIPE_PAR,  label: 'Recipe Params    (0x2C27)', notify: false },
+      { key: 'recipeCtr', uuid: UUID_RECIPE_CTRL, label: 'Recipe Control   (0x2C26)', notify: false },
+      { key: 'desired',   uuid: UUID_DESIRED,     label: 'Desired Cond.    (0x2C2A)', notify: true  },
+      { key: 'stepSt',    uuid: UUID_STEP_STATUS, label: 'Step Status      (0x2C28)', notify: true  },
+      { key: 'sensor',    uuid: UUID_SENSOR_DATA, label: 'Sensor Data      (0x2C2C)', notify: true  },
+    ];
+    for (const def of charDefs) {
+      try {
+        const c = await findChar(def.uuid);
+        if (def.key === 'cap')        capChar        = c;
+        if (def.key === 'recipePar') recipeParChar  = c;
+        if (def.key === 'recipeCtr') recipeCtrlChar = c;
+        if (def.key === 'desired')   { desiredChar   = c; c.addEventListener('characteristicvaluechanged', handleDesiredConditions); }
+        if (def.key === 'stepSt')    { stepStatusChar = c; c.addEventListener('characteristicvaluechanged', handleStepStatus); }
+        if (def.key === 'sensor')    { sensorChar    = c; c.addEventListener('characteristicvaluechanged', handleSensorData); }
+        const props = Object.keys(c.properties).filter(k => c.properties[k]).join(',');
+        log(`  ${def.label} ✓ [${props}]`);
+      } catch (e) { log(`  ${def.label}: ${e.message}`, true); }
+    }
+
+    // --- Cookware Description (CZS service) ---
+    try {
+      cwDescChar = await findChar(UUID_CWD_DESC, [CZS_SVC, CZS_NEW, CZ_SVC]);
+      log('CWD Description (0x8FF6) ✓');
+    } catch {
+      try {
+        cwDescChar = await findChar(UUID_CWD_DESC2, [CZ_SVC, CZS_SVC, CZS_NEW]);
+        log('CWD Description (0x2C25) ✓');
+      } catch { log('CWD Description char not found', true); }
+    }
+
+    setConnected(true, device.name ?? device.id);
+    await enableAllNotifications();
+  } catch (e) {
+    if (e.name !== 'NotFoundError') log(`Connect error: ${e.message}`, true);
+    else log('Device picker cancelled');
+    setConnected(false);
+  } finally {
+    $('connectBtn').disabled = false;
+  }
+});
+
+$('disconnectBtn').addEventListener('click', () => {
+  if (device?.gatt?.connected) device.gatt.disconnect();
+});
+
+function onDisconnected() {
+  gatt = null;
+  cwDescChar = null; capChar = null; recipeParChar = null;
+  desiredChar = null; recipeCtrlChar = null;
+  stepStatusChar = null; sensorChar = null;
+  setConnected(false);
+  resetLive();
+  stopRunner();
+  updateCwState('disconnected');
+  log('Device disconnected');
+}
+
+function setConnected(c, label = '') {
+  connected = c;
+  $('connDot').className     = 'dot ' + (c ? 'dot-ok' : 'dot-idle');
+  $('connLabel').textContent = c ? `connected${label ? ' — ' + label : ''}` : 'disconnected';
+  $('connLabel').style.color = c ? 'var(--green)' : '';
+
+  const ringCfg = [
+    { id: 'z1-r3', base: '#f97316', baseOp: '0.55' },
+    { id: 'z1-r2', base: '#ef4444', baseOp: '0.45' },
+    { id: 'z1-r1', base: '#dc2626', baseOp: '0.35' },
+  ];
+  ringCfg.forEach(({ id, base, baseOp }) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (c) { el.setAttribute('stroke', base); el.setAttribute('opacity', '0.95'); el.style.filter = `drop-shadow(0 0 6px ${base})`; }
+    else   { el.style.filter = ''; el.setAttribute('opacity', baseOp); }
+  });
+  $('z1dot').setAttribute('fill', c ? '#22c55e' : '#334155');
+  $('z1statusText').textContent = c ? (label || 'connected') : 'no device';
+  $('z1statusText').setAttribute('fill', c ? '#22c55e' : '#4b5563');
+
+  if (c) updateCwState('standby');
+  else   updateCwState('disconnected');
+}
+
+function resetLive() {
+  $('tempDisplay').textContent        = '—';
+  $('z1tempSvg').textContent          = '—';
+  $('targetTempDisplay').textContent  = '—';
+  ['condDesiredPower','condTemp','stepStatus','stepRemaining'].forEach(id => $(id).textContent = '—');
+  $('desiredDisplay').textContent = '—';
+  $('notifStatus').textContent    = '—';
+}
+
+// ── Cookware State UI ─────────────────────────────────────────────────────────
+const CW_STATES = {
+  disconnected: { label: 'Disconnected / Advertising', desc: 'Blinking Blue · not connected',  dot: '#475569', blink: false },
+  standby:      { label: 'Connected — Standby',        desc: 'Solid Blue · waiting',           dot: '#3b82f6', blink: false },
+  running:      { label: 'Recipe Running',             desc: 'Green · cooking step active',    dot: '#22c55e', blink: false },
+  user_action:  { label: 'User Action Required',       desc: 'Flashing Orange · input needed', dot: '#f97316', blink: true  },
+};
+function updateCwState(state, actionMsg = null) {
+  cwState = state;
+  const s  = CW_STATES[state] ?? CW_STATES.disconnected;
+  const dot = $('cwStateDot'), lbl = $('cwStateLabel'), desc = $('cwStateDesc'), msgEl = $('cwActionMsg');
+  if (!dot) return;
+  dot.style.background = s.dot;
+  dot.style.boxShadow  = `0 0 8px ${s.dot}`;
+  if (s.blink) dot.classList.add('cw-blink'); else dot.classList.remove('cw-blink');
+  lbl.textContent = s.label; lbl.style.color = s.dot;
+  desc.textContent = s.desc;
+  if (state === 'user_action' && actionMsg) { msgEl.textContent = '👉 ' + actionMsg; msgEl.style.display = 'block'; }
+  else { msgEl.style.display = 'none'; msgEl.textContent = ''; }
+}
+
+// ── Notifications (auto-enabled after connect) ────────────────────────────────
+async function enableAllNotifications() {
+  const pairs = [
+    { name: 'Sensor Data (0x2C2C)',    char: sensorChar },
+    { name: 'Step Status (0x2C28)',    char: stepStatusChar },
+    { name: 'Desired Cond. (0x2C2A)', char: desiredChar },
+  ].filter(p => p.char);
+
+  if (!pairs.length) return;
+  let ok = 0, fail = 0;
+  for (const { name, char } of pairs) {
+    const canNotify = char.properties.notify || char.properties.indicate;
+    if (!canNotify) { log(`  ${name} — no notify/indicate property, skip`, true); fail++; continue; }
+    try {
+      await char.startNotifications();
+      log(`  ${name} ✓ notifications enabled`);
+      ok++;
+    } catch (e) {
+      if (e.name === 'InvalidStateError' || e.message?.includes('already')) {
+        log(`  ${name} — already enabled`); ok++;
+      } else { log(`  ${name} — ${e.message}`, true); fail++; }
+    }
+  }
+  $('notifStatus').textContent = ok > 0 ? `🔔 ${ok} live${fail ? ', ' + fail + ' failed' : ''}` : '';
+  $('notifStatus').style.color = ok > 0 ? 'var(--green)' : 'var(--red)';
+}
+
+// ── Notification handlers ─────────────────────────────────────────────────────
+function handleSensorData(event) {
+  const dv = event.target.value;
+  if (!dv || dv.byteLength < 3) return;
+  const flags   = dv.getUint8(0);
+  const tempRaw = dv.getUint16(1, true);
+  const temp    = tempRaw >= 0x8000 ? tempRaw - 0x10000 : tempRaw;
+  const tempC   = (temp / 10).toFixed(1);
+  $('tempDisplay').textContent = tempC + ' °C';
+  $('z1tempSvg').textContent   = tempC + '°';
+  $('condTemp').textContent    = tempC;
+}
+
+function handleDesiredConditions(event) {
+  const dv = event.target.value;
+  if (!dv || dv.byteLength < 2) return;
+  const flags = dv.getUint16(0, true);
+  let offset = 2, power = null, temperature = null, humidity = null, blower = null;
+  if ((flags & 0x0001) && dv.byteLength >= offset + 2) { power = dv.getUint16(offset, true); offset += 2; }
+  if ((flags & 0x0002) && dv.byteLength >= offset + 2) {
+    const raw = dv.getUint16(offset, true);
+    temperature = raw >= 0x8000 ? raw - 0x10000 : raw; offset += 2;
+  }
+  if ((flags & 0x0004) && dv.byteLength >= offset + 2) { humidity = dv.getUint16(offset, true); offset += 2; }
+  if ((flags & 0x0008) && dv.byteLength >= offset + 1) { blower = dv.getUint8(offset); }
+
+  if (power !== null) $('condDesiredPower').textContent = (power * 0.1).toFixed(1) + ' %';
+
+  const lines = [
+    `flags:       0x${flags.toString(16).padStart(4,'0').toUpperCase()}`,
+    `power:       ${power       !== null ? (power * 0.1).toFixed(1) + ' %' : '—'}`,
+    `temperature: ${temperature !== null ? (temperature / 10).toFixed(1) + ' °C' : '—'}`,
+    `humidity:    ${humidity    !== null ? humidity : '—'}`,
+    `blower:      ${blower      !== null ? blower   : '—'}`,
+  ];
+  $('desiredDisplay').textContent = lines.join('\n');
+}
+
+function handleStepStatus(event) {
+  const dv = event.target.value;
+  if (!dv || dv.byteLength < 5) return;
+  const flags      = dv.getUint8(0);
+  const userAction = !!(flags & 0x01);
+  const lastStep   = !!(flags & 0x02);
+  const started    = !!(flags & 0x04);
+  const stepIndex  = dv.getUint16(1, true);
+  const remaining  = dv.getUint16(3, true);
+
+  let statusTxt = started ? (userAction ? '🟠 User Action' : '🟢 Active') : '⬜ Idle';
+  if (lastStep && started) statusTxt += ' · last step';
+  $('stepStatus').textContent = statusTxt;
+
+  if (remaining === 0x0000)      $('stepRemaining').textContent = 'completed';
+  else if (remaining === 0xFFFF) $('stepRemaining').textContent = '— (unknown)';
+  else if (remaining > 0xFF00)   $('stepRemaining').textContent = 'RFU';
+  else {
+    const min = Math.floor(remaining / 60), sec = remaining % 60;
+    $('stepRemaining').textContent = `${min}:${sec.toString().padStart(2, '0')}`;
+  }
+
+  if (!connected) return;
+  if (started && remaining > 0 && remaining <= 0xFF00) {
+    updateCwState('running');
+  } else if (remaining === 0x0000) {
+    if (runnerActive) { stopRunner(); autoAdvanceIfPossible(); }
+    else {
+      const step = loadedSteps[currentStepIdx];
+      updateCwState(userAction ? 'user_action' : 'standby', userAction ? (step?.user_action_message ?? null) : null);
+    }
+  }
+}
+
+// ── Packet builders ───────────────────────────────────────────────────────────
+function buildRecipeParamsBuf({ flags, stepIdx, procType, duration, temp, termCond }) {
+  let f = flags;
+  if (temp     == null) { f &= ~0x0008; f &= ~0x0010; }
+  if (termCond == null) f &= ~0x0040;
+  const bytes = [f & 0xFF, (f >> 8) & 0xFF, stepIdx & 0xFF, (stepIdx >> 8) & 0xFF, procType & 0xFF];
+  if (procType !== 0 && duration != null) bytes.push(duration & 0xFF, (duration >> 8) & 0xFF);
+  if (f & 0x0008) {
+    const t16 = ((temp % 65536) + 65536) % 65536;
+    bytes.push(t16 & 0xFF, (t16 >> 8) & 0xFF);
+  }
+  if (f & 0x0040) bytes.push(termCond & 0xFF, (termCond >> 8) & 0xFF);
+  return new Uint8Array(bytes);
+}
+
+function buildDesiredCondBuf(flags, power, temp, blower) {
+  let f = flags;
+  if (power  == null) f &= ~0x0001;
+  if (temp   == null) f &= ~0x0002;
+  if (blower == null) f &= ~0x0008;
+  const bytes = [f & 0xFF, (f >> 8) & 0xFF];
+  if (f & 0x0001) bytes.push(power & 0xFF, (power >> 8) & 0xFF);
+  if (f & 0x0002) { const t16 = ((temp % 65536) + 65536) % 65536; bytes.push(t16 & 0xFF, (t16 >> 8) & 0xFF); }
+  if (f & 0x0008) bytes.push(blower & 0xFF);
+  return new Uint8Array(bytes);
+}
+
+function buildCapBuf() {
+  const bit1 = $('capBit1').checked, bit2 = $('capBit2').checked, bit4 = $('capBit4').checked;
+  let flags = 0;
+  if ($('capBit0').checked) flags |= 0x0001;
+  if (bit1)                  flags |= 0x0002;
+  if (bit2)                  flags |= 0x0004;
+  if ($('capBit3').checked) flags |= 0x0008;
+  if (bit4)                  flags |= 0x0010;
+  if ($('capBit5').checked) flags |= 0x0020;
+  const powerTech = parseInt($('capPowerTech').value) & 0xFF;
+  const numSteps  = Math.max(0, Math.min(65535, parseInt($('capNumSteps').value) || 0));
+  const u16 = v => [v & 0xFF, (v >> 8) & 0xFF];
+  const u24 = v => [v & 0xFF, (v >> 8) & 0xFF, (v >> 16) & 0xFF];
+  const i16 = v => { const s = ((v % 65536) + 65536) % 65536; return u16(s); };
+  const buf = [...u16(flags), powerTech, ...u16(numSteps)];
+  if (bit1) { buf.push(...u24(Math.max(0,parseInt($('capNomPower').value)||0)), Math.max(0,Math.min(255,parseInt($('capBoost').value)||0)), ...u16(Math.max(0,parseInt($('capMinPower').value)||0))); }
+  if (bit2) { buf.push(...i16(parseInt($('capMaxTemp').value)||0), ...i16(parseInt($('capMinTemp').value)||0)); }
+  if (bit4) { buf.push(...u16(Math.max(0,parseInt($('capMaxBlower').value)||0))); }
+  return new Uint8Array(buf);
+}
+
+function buildCapHex() {
+  return Array.from(buildCapBuf()).map(b => b.toString(16).padStart(2,'0').toUpperCase()).join(' ');
+}
+
+// ── CZ Capabilities ───────────────────────────────────────────────────────────
+function updateCapVisibility() {
+  $('capPowerFields').style.display  = $('capBit1').checked ? 'flex' : 'none';
+  $('capTempFields').style.display   = $('capBit2').checked ? 'flex' : 'none';
+  $('capBlowerFields').style.display = $('capBit4').checked ? 'flex' : 'none';
+}
+function updateCapHex() { $('capHexPreview').textContent = buildCapHex(); }
+
+['capBit0','capBit1','capBit2','capBit3','capBit4','capBit5'].forEach(id =>
+  $(id).addEventListener('change', () => { updateCapVisibility(); updateCapHex(); }));
+['capPowerTech','capNumSteps','capNomPower','capBoost','capMinPower','capMaxTemp','capMinTemp','capMaxBlower'].forEach(id =>
+  $(id).addEventListener('input', updateCapHex));
+
+$('toggleCapBtn').addEventListener('click', () => {
+  const p = $('capPanel'), open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  $('toggleCapBtn').textContent = open ? '▼ Show' : '▲ Hide';
+});
+
+$('sendCapBtn').addEventListener('click', async () => {
+  if (!connected)  { log('Not connected', true); return; }
+  if (!capChar)    { log('CZ Capabilities char not available', true); return; }
+  $('sendCapBtn').disabled = true;
+  try {
+    const buf = buildCapBuf();
+    await writeChar(capChar, buf);
+    log(`CZ Capabilities written → ${buildCapHex()}`);
+  } catch (e) { log(`CZ Capabilities error: ${e.message}`, true); }
+  finally { $('sendCapBtn').disabled = false; }
+});
+
+// ── Recipe loading ─────────────────────────────────────────────────────────────
+$('toggleRecipeBtn').addEventListener('click', () => {
+  const p = $('recipePanel'), open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  $('toggleRecipeBtn').textContent = open ? '▼ Show' : '▲ Hide';
+});
+
+$('recipeFileInput').addEventListener('change', e => {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = evt => {
+    try {
+      recipeData = JSON.parse(evt.target.result);
+      populateRecipeSelect();
+      log(`Recipe file loaded: ${file.name}`);
+    } catch (err) { log(`JSON parse error: ${err.message}`, true); }
+  };
+  reader.readAsText(file);
+});
+
+$('clearRecipeBtn').addEventListener('click', () => {
+  recipeData = null; loadedSteps = [];
+  $('recipeFileInput').value = '';
+  $('recipeSelect').innerHTML = '<option disabled selected>— select a recipe —</option>';
+  $('recipePickerRow').style.display  = 'none';
+  $('recipeSummary').style.display    = 'none';
+  $('stepRunnerCard').style.display   = 'none';
+  stopRunner(); log('Recipe cleared');
+});
+
+function populateRecipeSelect() {
+  const sel = $('recipeSelect');
+  sel.innerHTML = '<option disabled selected>— select a recipe —</option>';
+  if (!recipeData) return;
+  if (!Array.isArray(recipeData) && recipeData.steps) {
+    const opt = document.createElement('option'); opt.value = 0;
+    opt.textContent = recipeData.name ?? 'Recipe (from file)'; sel.appendChild(opt);
+  } else if (Array.isArray(recipeData) && recipeData[0]?.steps) {
+    recipeData.forEach((r, i) => {
+      const opt = document.createElement('option'); opt.value = i;
+      opt.textContent = r.name ?? `Recipe ${i + 1}`; sel.appendChild(opt);
+    });
+  } else if (Array.isArray(recipeData)) {
+    const opt = document.createElement('option'); opt.value = 0;
+    opt.textContent = 'Recipe (from file)'; sel.appendChild(opt);
+  }
+  $('recipePickerRow').style.display = 'block';
+}
+
+$('recipeSelect').addEventListener('change', () => {
+  const idx = parseInt($('recipeSelect').value);
+  let steps;
+  if (!Array.isArray(recipeData) && recipeData?.steps)  steps = recipeData.steps;
+  else if (recipeData?.[idx]?.steps)                     steps = recipeData[idx].steps;
+  else                                                   steps = recipeData;
+
+  loadedSteps = steps || [];
+  const name  = (!Array.isArray(recipeData) ? recipeData.name : recipeData[idx]?.name) ?? 'Recipe';
+  $('recipeName').textContent  = name;
+  $('stepCount').textContent   = `${loadedSteps.length} step(s)`;
+  $('recipeSummary').style.display = 'block';
+  log(`Recipe "${name}" — ${loadedSteps.length} step(s)`);
+
+  currentStepIdx = 0; stopRunner(); renderAllSteps(); showCurrentStep();
+  $('stepRunnerCard').style.display = 'block';
+});
+
+// ── Step Runner ────────────────────────────────────────────────────────────────
+const PROC_TYPE_NAMES = {1:'Heat',2:'Cool',4:'Hold',8:'Mix',12:'Sear',16:'Steam',32:'Grill'};
+
+function showCurrentStep() {
+  const step = loadedSteps[currentStepIdx];
+  if (!step) { $('stepRunnerDot').className = 'dot dot-idle'; $('stepRunnerStatus').textContent = 'no more steps'; return; }
+  $('csStepNum').textContent    = step.step_index ?? (currentStepIdx + 1);
+  $('csProcType').textContent   = PROC_TYPE_NAMES[step.cooking_process_type] ?? `type ${step.cooking_process_type ?? '—'}`;
+  $('csTargetTemp').textContent = step.temperature != null ? `${(step.temperature / 10).toFixed(1)}°C` : '—°C';
+  $('csDuration').textContent   = step.duration    != null ? `${step.duration}s` : '—s';
+  $('csFlags').textContent      = step.flags        != null ? `0x${step.flags.toString(16).padStart(4,'0')}` : '0x—';
+  if (step.flag_user_action && step.user_action_message) {
+    $('csUserAction').style.display = 'block'; $('csUserActionMsg').textContent = step.user_action_message;
+  } else { $('csUserAction').style.display = 'none'; }
+  $('csProgressBar').style.width  = '0%';
+  $('csElapsed').textContent      = '0s elapsed';
+  $('csRemainingTime').textContent = step.duration != null ? `${step.duration}s remaining` : '—s remaining';
+  prefillFormsFromStep(step); renderAllSteps();
+}
+
+function prefillFormsFromStep(step) {
+  if (step.flags               != null) $('rpFlags').value    = step.flags.toString(16).padStart(4,'0');
+  if (step.step_index          != null) $('rpStepIdx').value  = step.step_index;
+  if (step.cooking_process_type!= null) $('rpProcType').value = step.cooking_process_type;
+  if (step.duration            != null) $('rpDuration').value = step.duration;
+  if (step.temperature         != null) $('rpTemp').value     = step.temperature;
+  $('rpTermCond').value = '';
+  let condFlags = 0;
+  if ((step.temperature      ?? null) !== null) condFlags |= 0x0002;
+  if ((step.power_level      ?? null) !== null) condFlags |= 0x0001;
+  if ((step.blower_fan_speed ?? null) !== null) condFlags |= 0x0008;
+  $('dcFlags').value  = condFlags.toString(16).padStart(4,'0');
+  $('dcTemp').value   = step.temperature      ?? '';
+  $('dcPower').value  = step.power_level      ?? '';
+  $('dcBlower').value = step.blower_fan_speed ?? '';
+}
+
+function renderAllSteps() {
+  $('allStepsList').innerHTML = loadedSteps.map((s, i) => {
+    const active = i === currentStepIdx, done = i < currentStepIdx;
+    const cls    = active ? 'active' : done ? 'done' : '';
+    const name   = s.user_action_message ?? PROC_TYPE_NAMES[s.cooking_process_type] ?? `Step ${i + 1}`;
+    const tempStr = s.temperature != null ? ` · ${(s.temperature / 10).toFixed(1)}°C` : '';
+    const durStr  = s.duration    != null ? ` · ${s.duration}s` : '';
+    return `<div class="step-card ${cls}" style="font-size:11px; cursor:pointer" onclick="jumpToStep(${i})">
+      <b style="color:${active?'var(--accent)':done?'var(--green)':'var(--muted)'}">${s.step_index ?? i+1}</b>
+      ${name}${tempStr}${durStr}
+    </div>`;
+  }).join('');
+}
+
+function jumpToStep(idx) { stopRunner(); currentStepIdx = idx; showCurrentStep(); }
+
+function startStepTimer(duration) {
+  stepStartTime = Date.now(); runnerActive = true;
+  $('stepRunnerDot').className = 'dot dot-ok';
+  $('stepRunnerStatus').textContent = 'running';
+  $('currentStepCard').style.borderColor = 'var(--accent)';
+  if (stepTimerHandle) clearInterval(stepTimerHandle);
+  stepTimerHandle = setInterval(() => {
+    const elapsed   = Math.floor((Date.now() - stepStartTime) / 1000);
+    const remaining = duration ? Math.max(0, duration - elapsed) : null;
+    $('csElapsed').textContent       = `${elapsed}s elapsed`;
+    $('csRemainingTime').textContent = remaining != null ? `${remaining}s remaining` : '—s remaining';
+    if (duration) {
+      $('csProgressBar').style.width = Math.min(100, (elapsed / duration) * 100) + '%';
+      if (elapsed >= duration) {
+        clearInterval(stepTimerHandle); stepTimerHandle = null; runnerActive = false;
+        $('stepRunnerDot').className = 'dot dot-idle';
+        autoAdvanceIfPossible();
+      }
+    }
+  }, 1000);
+}
+
+function stopRunner() {
+  runnerActive = false;
+  if (stepTimerHandle) { clearInterval(stepTimerHandle); stepTimerHandle = null; }
+  $('stepRunnerDot').className      = 'dot dot-idle';
+  $('stepRunnerStatus').textContent = 'idle';
+  $('currentStepCard').style.borderColor = '';
+}
+
+async function sendCurrentStep() {
+  if (!connected)     throw new Error('Not connected');
+  if (!recipeParChar) throw new Error('Recipe Params char not available');
+  if (!recipeCtrlChar)throw new Error('Recipe Control char not available');
+  const step = loadedSteps[currentStepIdx];
+  if (!step) throw new Error('No step selected');
+
+  const buf = buildRecipeParamsBuf({
+    flags:    step.flags               ?? 0x0008,
+    stepIdx:  step.step_index          ?? (currentStepIdx + 1),
+    procType: step.cooking_process_type ?? 0,
+    duration: step.duration            ?? null,
+    temp:     step.temperature         ?? null,
+    termCond: null,
+  });
+  log(`Step ${currentStepIdx+1} → proc=${step.cooking_process_type??0} dur=${step.duration??'—'} temp=${step.temperature??'—'}`);
+  await writeChar(recipeParChar, buf);
+  log('Recipe Params written ✓');
+
+  await writeChar(recipeCtrlChar, new Uint8Array([0x01])); // START
+  log('▶ START sent');
+  flashRings('#22c55e');
+
+  if (step.temperature != null) $('targetTempDisplay').textContent = (step.temperature / 10).toFixed(1) + ' °C';
+  updateCwState('running');
+  if (step.duration) startStepTimer(step.duration);
+}
+
+async function autoAdvanceIfPossible() {
+  const doneStep = loadedSteps[currentStepIdx];
+  const isLast   = currentStepIdx >= loadedSteps.length - 1;
+  const needsUser = doneStep?.flag_user_action;
+  if (!isLast && !needsUser) {
+    currentStepIdx++; showCurrentStep();
+    log(`Auto-advance → step ${currentStepIdx + 1}`);
+    try { await sendCurrentStep(); } catch (e) { log(`Auto-advance error: ${e.message}`, true); }
+  } else if (isLast) {
+    $('stepRunnerStatus').textContent = '🏁 Recipe complete';
+    log('All steps completed');
+    updateCwState(needsUser ? 'user_action' : 'standby', needsUser ? (doneStep?.user_action_message ?? null) : null);
+  } else {
+    updateCwState('user_action', doneStep?.user_action_message ?? null);
+    $('stepRunnerStatus').textContent = 'step done — advance manually';
+  }
+}
+
+$('sendStepBtn').addEventListener('click', async () => {
+  $('sendStepBtn').disabled = true;
+  try { await sendCurrentStep(); } catch (e) { log(`Send step error: ${e.message}`, true); }
+  finally { $('sendStepBtn').disabled = false; }
+});
+
+$('nextStepBtn').addEventListener('click', () => {
+  stopRunner();
+  if (currentStepIdx < loadedSteps.length - 1) { currentStepIdx++; showCurrentStep(); log(`Advanced to step ${currentStepIdx+1}`); }
+  else { $('stepRunnerStatus').textContent = '🏁 Recipe complete'; log('All steps completed'); if (connected) updateCwState('standby'); }
+});
+$('stopRunnerBtn').addEventListener('click', () => { stopRunner(); log('Step runner stopped'); if (connected) updateCwState('standby'); });
+
+// ── Recipe Params manual form ──────────────────────────────────────────────────
+$('toggleRpBtn').addEventListener('click', () => {
+  const p = $('rpPanel'), open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  $('toggleRpBtn').textContent = open ? '▼ Show' : '▲ Hide';
+});
+
+$('sendRecipeBtn').addEventListener('click', async () => {
+  if (!connected)     { log('Not connected', true); return; }
+  if (!recipeParChar) { log('Recipe Params char not available', true); return; }
+  const flags    = (parseInt($('rpFlags').value, 16) || 0) & 0xFFFF;
+  const stepIdx  = parseInt($('rpStepIdx').value)  || 1;
+  const procType = parseInt($('rpProcType').value) || 0;
+  const duration = $('rpDuration').value !== '' ? parseInt($('rpDuration').value) : null;
+  const temp     = $('rpTemp').value     !== '' ? parseInt($('rpTemp').value)     : null;
+  const termCond = $('rpTermCond').value !== '' ? (parseInt($('rpTermCond').value, 16) & 0xFFFF) : null;
+
+  log(`Recipe Params → proc=${procType} dur=${duration??'—'} temp=${temp??'—'}`);
+  try {
+    const buf = buildRecipeParamsBuf({ flags, stepIdx, procType, duration, temp, termCond });
+    await writeChar(recipeParChar, buf);
+    log('Recipe Params written ✓');
+    if (temp !== null) $('targetTempDisplay').textContent = (temp / 10).toFixed(1) + ' °C';
+  } catch (e) { log(`Recipe Params error: ${e.message}`, true); }
+});
+
+// ── Desired Conditions ─────────────────────────────────────────────────────────
+$('toggleDesiredBtn').addEventListener('click', () => {
+  const p = $('desiredPanel'), open = p.style.display !== 'none';
+  p.style.display = open ? 'none' : 'block';
+  $('toggleDesiredBtn').textContent = open ? '▼ Show' : '▲ Hide';
+});
+
+$('writeDesiredBtn').addEventListener('click', async () => {
+  if (!connected)   { log('Not connected', true); return; }
+  if (!desiredChar) { log('Desired Conditions char not available', true); return; }
+  $('writeDesiredBtn').disabled = true;
+  const flags = parseInt($('dcFlags').value, 16) || 0;
+  const temp  = $('dcTemp').value  !== '' ? parseInt($('dcTemp').value)  : null;
+  const power = $('dcPower').value !== '' ? parseInt($('dcPower').value) : null;
+  const blow  = $('dcBlower').value !== '' ? parseInt($('dcBlower').value) : null;
+  try {
+    await writeChar(desiredChar, buildDesiredCondBuf(flags, power, temp, blow));
+    const ts = new Date().toLocaleTimeString();
+    $('desiredStatus').textContent = `✅ sent at ${ts}`;
+    $('desiredStatus').style.color = 'var(--green)';
+    log(`Desired → flags=0x${flags.toString(16)} temp=${temp??'—'} power=${power??'—'} blower=${blow??'—'}`);
+  } catch (e) {
+    log(`Write desired error: ${e.message}`, true);
+    $('desiredStatus').textContent = '❌ error';
+    $('desiredStatus').style.color = 'var(--red)';
+  } finally { $('writeDesiredBtn').disabled = false; }
+});
+
+// ── Recipe Control ─────────────────────────────────────────────────────────────
+const RING_COLORS = { 'z1-r1': '#dc2626', 'z1-r2': '#ef4444', 'z1-r3': '#f97316' };
+function flashRings(color, restoreMs = 900) {
+  Object.keys(RING_COLORS).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.setAttribute('stroke', color); setTimeout(() => el.setAttribute('stroke', RING_COLORS[id]), restoreMs); }
+  });
+}
+
+$('startBtn').addEventListener('click', async () => {
+  if (!connected)      { log('Not connected', true); return; }
+  if (!recipeCtrlChar) { log('Recipe Control char not available', true); return; }
+  try {
+    await writeChar(recipeCtrlChar, new Uint8Array([0x01]));
+    log('▶ Recipe START sent (op=0x01)');
+    flashRings('#22c55e');
+    updateCwState('running');
+  } catch (e) { log(`START error: ${e.message}`, true); }
+});
+
+$('stopBtn').addEventListener('click', async () => {
+  if (!connected)      { log('Not connected', true); return; }
+  if (!recipeCtrlChar) { log('Recipe Control char not available', true); return; }
+  try {
+    await writeChar(recipeCtrlChar, new Uint8Array([0x02]));
+    log('■ Recipe STOP sent (op=0x02)');
+    flashRings('#ef4444', 500);
+    stopRunner();
+    updateCwState('standby');
+  } catch (e) { log(`STOP error: ${e.message}`, true); }
+});
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+updateCapVisibility();
+updateCapHex();
+
+if (!navigator.bluetooth) {
+  $('nobtWarn').style.display = 'block';
+  $('connectBtn').disabled = true;
+  $('connectBtn').title = 'Web Bluetooth not supported in this browser';
+  log('Web Bluetooth not available in this browser/context', true);
+}
+</script>
+</body>
+</html>
