@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Smart Cookware — Native Web Bluetooth</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:       #0f172a;
+      --surface:  #1e293b;
+      --surface2: #263548;
+      --border:   #334155;
+      --text:     #f1f5f9;
+      --muted:    #94a3b8;
+      --accent:   #3b82f6;
+      --green:    #22c55e;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg); color: var(--text);
+      padding: 24px 16px; max-width: 520px; margin: 0 auto; min-height: 100vh;
+    }
+    .hero {
+      text-align: center; padding: 24px 0 28px;
+      border-bottom: 1px solid var(--border); margin-bottom: 24px;
+    }
+    .hero h1 { font-size: 1.4em; font-weight: 700; margin-bottom: 6px; }
+    .hero p   { font-size: 0.85em; color: var(--muted); line-height: 1.6; }
+    .badge {
+      display: inline-block; font-size: 0.65em; background: #1d4ed820;
+      color: #60a5fa; border: 1px solid #3b82f640;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 12px;
+    }
+    .uc-grid { display: flex; flex-direction: column; gap: 12px; }
+    .uc-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px; text-decoration: none; color: var(--text);
+      display: flex; align-items: center; gap: 16px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .uc-card:hover { background: var(--surface2); border-color: var(--accent); }
+    .uc-icon { font-size: 2em; flex-shrink: 0; }
+    .uc-body { flex: 1; }
+    .uc-title { font-size: 1em; font-weight: 700; margin-bottom: 3px; }
+    .uc-desc  { font-size: 0.78em; color: var(--muted); line-height: 1.5; }
+    .uc-arrow { color: var(--muted); font-size: 1.1em; }
+    .info-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px; margin-top: 24px;
+      font-size: 12px; color: var(--muted); line-height: 1.8;
+    }
+    .info-box strong { color: var(--text); }
+    code {
+      background: #0a0f1a; border: 1px solid var(--border);
+      border-radius: 4px; padding: 1px 5px;
+      font-family: monospace; font-size: 11px; color: #93c5fd;
+    }
+  </style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="badge">🔵 Native Web Bluetooth · No backend required</div>
+  <h1>Smart Cookware CZS v26</h1>
+  <p>Direct BLE from the browser — no Python backend needed.<br>
+     Select a use case below.</p>
+</div>
+
+<div class="uc-grid">
+
+  <a href="uc1.html" class="uc-card">
+    <span class="uc-icon">📲</span>
+    <div class="uc-body">
+      <div class="uc-title">UC1 — CW-Smartphone (Connect &amp; Read)</div>
+      <div class="uc-desc">
+        Request BLE device → connect → read Cookware Description → live temperature notifications (0x2C2C).
+      </div>
+    </div>
+    <span class="uc-arrow">›</span>
+  </a>
+
+  <a href="uc2.1.html" class="uc-card">
+    <span class="uc-icon">📱</span>
+    <div class="uc-body">
+      <div class="uc-title">UC2.1 — CW-Smartphone (Recipe at CW)</div>
+      <div class="uc-desc">
+        Full control: CZ Capabilities (0x2C29) · Recipe Params (0x2C27) · Desired Conditions (0x2C2A) ·
+        Recipe Control START/STOP (0x2C26) · live Step Status + Sensor Data notifications.
+        Recipe file loader with step runner.
+      </div>
+    </div>
+    <span class="uc-arrow">›</span>
+  </a>
+
+</div>
+
+<div class="info-box">
+  <strong>⚠️ Requirements</strong><br>
+  • <strong>Chrome / Edge / Opera</strong> on desktop or Android (Web BT not supported on iOS Safari or Firefox)<br>
+  • Page must be served via <code>https://</code> or <code>localhost</code><br>
+  • Quick local server: <code>python3 -m http.server 8080</code> then open <code>http://localhost:8080/26_NativeWebBT/</code><br><br>
+  <strong>ℹ️ Services used</strong><br>
+  • Cooking Zone Service <code>0x8FF8</code> — characteristics 0x2C26–0x2C2C<br>
+  • Cookware Service <code>0x8FF7</code> / <code>0x185D</code> — Cookware Description 0x8FF6 / 0x2C25<br>
+</div>
+
+</body>
+</html>

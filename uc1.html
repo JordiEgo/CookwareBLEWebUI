@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UC1 · CW-Smartphone — Native Web BT</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #18181b; color: #f1f5f9; font-family: 'Inter', system-ui, sans-serif; margin: 0; }
+    .container { max-width: 440px; margin: 0 auto; padding: 18px; }
+    .page-header { display:flex; align-items:center; gap:10px; padding-bottom:14px; margin-bottom:14px; border-bottom:1px solid #334155; }
+    .btn-back { background:#23232b; border:1px solid #334155; color:#a5b4fc; border-radius:7px; padding:6px 12px; cursor:pointer; font-size:13px; text-decoration:none; white-space:nowrap; }
+    .btn-back:hover { background:#1e293b; color:#f1f5f9; }
+    .page-title { font-size:1.05em; font-weight:700; flex:1; }
+    .uc-badge { font-size:0.68em; background:#05966920; color:#6ee7b7; border:1px solid #05966940; padding:3px 9px; border-radius:20px; white-space:nowrap; }
+    .wbt-badge { font-size:0.65em; background:#1d4ed820; color:#60a5fa; border:1px solid #3b82f640; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+    .card { background:#23232b; border-radius:14px; box-shadow:0 2px 8px #0002; margin-bottom:18px; padding:18px; }
+    font-size:1.1em; font-weight:600; margin-bottom:10px; color:#a5b4fc;
+    }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .row-between { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+    .btn { background:#18181b; color:#a5b4fc; border:1px solid #6366f1; border-radius:6px; padding:6px 16px; font-size:1em; cursor:pointer; transition:background 0.2s; white-space:nowrap; }
+    .btn:disabled { opacity:0.5; cursor:not-allowed; }
+    .btn:hover:not(:disabled) { background:#1e1e2e; }
+    .btn-outline { border-color:#334155; color:#94a3b8; }
+    .btn-sm { padding:5px 12px; font-size:0.9em; }
+    .dot { width:12px; height:12px; border-radius:50%; display:inline-block; margin-right:6px; background:#64748b; }
+    .dot-ok { background:#22c55e; box-shadow:0 0 5px #22c55e; }
+    .induction-svg { display:block; margin:0 auto; width:180px; height:180px; }
+    .svg-wrap { width:180px; height:180px; margin:0 auto; }
+    .log { background:#18181b; color:#a5b4fc; font-size:0.95em; border-radius:8px; padding:10px; min-height:40px; max-height:140px; overflow-y:auto; font-family:monospace; line-height:1.6; white-space:pre-wrap; word-break:break-word; }
+    .device-display { background:#18181b; color:#a5b4fc; border:1px solid #334155; border-radius:6px; padding:6px 10px; font-size:0.9em; min-height:30px; font-family:monospace; margin-top:10px; }
+    .info-desc { font-size:0.95em; color:#fbbf24; background:#18181b; border-radius:8px; padding:10px; min-height:32px; white-space:pre-line; line-height:1.6; }
+    .warn-banner { background:#7c2d1220; border:1px solid #f9731640; color:#fcd34d; border-radius:10px; padding:12px 14px; font-size:12px; margin-bottom:14px; line-height:1.7; }
+  </style>
+</head>
+<body>
+<div class="container">
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<div class="page-header">
+  <a href="index.html" class="btn-back">← Main</a>
+  <span class="page-title">📲 CW-Smartphone</span>
+  <span class="uc-badge">USE CASE 1</span>
+  <span class="wbt-badge">🔵 Web BT</span>
+</div>
+
+<!-- ── BT warning ─────────────────────────────────────────────────────────── -->
+<div id="nobtWarn" class="warn-banner" style="display:none">
+  ⚠️ <strong>Web Bluetooth not supported</strong> in this browser.<br>
+  Use <strong>Chrome / Edge / Opera</strong> on desktop or Android (not iOS).<br>
+  Requires <code>https://</code> or <code>localhost</code>. Quick start: <code>python3 -m http.server 8080</code>
+</div>
+
+<!-- ── Select BLE Device (replaces Scan) ──────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">🔍 BLE Device</div>
+  <div class="row">
+    <button id="selectBtn" class="btn">🔵 Select BLE Device…</button>
+  </div>
+  <div id="deviceDisplay" class="device-display">— no device selected —</div>
+</div>
+
+<!-- ── Connection ─────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">🔗 Connection</div>
+  <div class="row">
+    <span class="dot" id="connDot"></span>
+    <span id="connLabel">disconnected</span>
+  </div>
+  <div class="row" style="margin-top:10px; gap:8px">
+    <button id="connectBtn" class="btn">Connect</button>
+    <button id="disconnectBtn" class="btn btn-outline btn-sm">Disconnect</button>
+    <span id="notifStatus" style="font-size:11px; color:#64748b"></span>
+  </div>
+</div>
+
+<!-- ── Cookware Info ────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title">🍲 Cookware Info</div>
+  <div style="display:flex; gap:16px; align-items:flex-start; flex-wrap:wrap;">
+    <div class="svg-wrap" style="flex-shrink:0;">
+      <svg class="induction-svg" viewBox="0 0 180 180">
+        <defs>
+          <filter id="tempGlow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="1" stdDeviation="3" flood-color="#000" flood-opacity="0.7"/>
+          </filter>
+        </defs>
+        <circle cx="90" cy="90" r="80" fill="#18181b" stroke="#6366f1" stroke-width="4"/>
+        <circle cx="90" cy="90" r="60" fill="#23232b" stroke="#a5b4fc" stroke-width="2"/>
+        <text id="tempVal" x="90" y="84" text-anchor="middle" dominant-baseline="middle"
+              fill="#fbbf24" font-size="26" font-weight="700" font-family="'Inter',system-ui"
+              filter="url(#tempGlow)">—</text>
+        <text x="90" y="108" text-anchor="middle"
+              fill="#a5b4fc" font-size="12" font-family="system-ui">°C</text>
+      </svg>
+    </div>
+    <div style="flex:1; min-width:0;">
+      <button id="readDescBtn" class="btn btn-sm" style="margin-bottom:10px">Read Cookware Info</button>
+      <div id="cwDescBox" class="info-desc">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Log ────────────────────────────────────────────────────────────────── -->
+<div class="card">
+  <div class="card-title" style="display:flex; justify-content:space-between">
+    🖥 Log
+    <button onclick="$('logBox').textContent=''" style="background:none; border:none; color:#64748b; cursor:pointer; font-size:11px">clear</button>
+  </div>
+  <div class="log" id="logBox">Ready.</div>
+</div>
+
+</div><!-- /container -->
+
+<script>
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+
+function log(msg, err = false) {
+  const box = $('logBox');
+  const ts  = new Date().toLocaleTimeString();
+  box.textContent += `[${ts}] ${err ? '[ERR] ' : ''}${msg}\n`;
+  const lines = box.textContent.split('\n');
+  if (lines.length > 300) box.textContent = lines.slice(-300).join('\n');
+  box.scrollTop = box.scrollHeight;
+}
+
+// ── UUIDs ─────────────────────────────────────────────────────────────────────
+const CZ_SVC  = '00008ff8-0000-1000-8000-00805f9b34fb';
+const CZS_SVC = '00008ff7-0000-1000-8000-00805f9b34fb';
+const CZS_NEW = '0000185d-0000-1000-8000-00805f9b34fb';
+
+const UUID_CWD_DESC    = '00008ff6-0000-1000-8000-00805f9b34fb';
+const UUID_CWD_DESC2   = '00002c25-0000-1000-8000-00805f9b34fb';
+const UUID_SENSOR_DATA = '00002c2c-0000-1000-8000-00805f9b34fb';
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let device = null, gatt = null;
+let cwDescChar = null, sensorChar = null;
+let connected = false;
+
+// ── Characteristic lookup (tries all services) ────────────────────────────────
+async function findChar(charUuid) {
+  for (const svcUuid of [CZ_SVC, CZS_SVC, CZS_NEW]) {
+    try {
+      const svc  = await gatt.getPrimaryService(svcUuid);
+      const char = await svc.getCharacteristic(charUuid);
+      return char;
+    } catch (_) {}
+  }
+  throw new Error(`Char 0x${charUuid.slice(4,8).toUpperCase()} not found in any service`);
+}
+
+// ── Step 1: Select device (browser picker) ────────────────────────────────────
+$('selectBtn').addEventListener('click', async () => {
+  $('selectBtn').disabled = true;
+  $('selectBtn').textContent = '⏳ Selecting…';
+  try {
+    device = await navigator.bluetooth.requestDevice({
+      filters: [
+        { namePrefix: 'EGO' },
+        { services: [CZ_SVC] },
+        { services: [CZS_NEW] },
+      ],
+      optionalServices: [CZ_SVC, CZS_SVC, CZS_NEW],
+    });
+    $('deviceDisplay').textContent = `${device.name ?? '(unnamed)'} — ${device.id}`;
+    log(`Device selected: ${device.name ?? device.id}`);
+    device.addEventListener('gattserverdisconnected', onDisconnected);
+  } catch (e) {
+    if (e.name !== 'NotFoundError') log(`Select error: ${e.message}`, true);
+    else log('Device picker cancelled');
+  } finally {
+    $('selectBtn').disabled = false;
+    $('selectBtn').textContent = '🔵 Select BLE Device…';
+  }
+});
+
+// ── Step 2: Connect ───────────────────────────────────────────────────────────
+$('connectBtn').addEventListener('click', async () => {
+  if (!device) { log('Select a device first', true); return; }
+  $('connectBtn').disabled = true;
+  $('connectBtn').textContent = '⏳ Connecting…';
+  try {
+    gatt = await device.gatt.connect();
+    log('GATT connected');
+
+    // Cookware Description
+    try {
+      cwDescChar = await findChar(UUID_CWD_DESC);
+      log('CWD Description (0x8FF6) ✓');
+    } catch {
+      try { cwDescChar = await findChar(UUID_CWD_DESC2); log('CWD Description (0x2C25) ✓'); }
+      catch { log('CWD Description not found', true); }
+    }
+
+    // Sensor Data (temperature) — auto-enable notifications
+    try {
+      sensorChar = await findChar(UUID_SENSOR_DATA);
+      sensorChar.addEventListener('characteristicvaluechanged', handleSensorData);
+      const props = Object.keys(sensorChar.properties).filter(k => sensorChar.properties[k]).join(',');
+      log(`Sensor Data (0x2C2C) ✓ [${props}]`);
+      const canNotify = sensorChar.properties.notify || sensorChar.properties.indicate;
+      if (canNotify) {
+        try {
+          await sensorChar.startNotifications();
+          $('notifStatus').textContent = '🔔 live';
+          $('notifStatus').style.color = '#22c55e';
+          log('Sensor notifications auto-enabled ✓');
+        } catch (e) {
+          if (e.name === 'InvalidStateError' || e.message?.includes('already')) {
+            $('notifStatus').textContent = '🔔 live'; $('notifStatus').style.color = '#22c55e';
+          } else { log(`Auto-enable notif: ${e.message}`, true); }
+        }
+      } else { log('Sensor Data — no notify/indicate property', true); }
+    } catch (e) { log(`Sensor Data (0x2C2C): ${e.message}`, true); }
+
+    setConnected(true, device.name ?? device.id);
+  } catch (e) { log(`Connect error: ${e.message}`, true); }
+  finally { $('connectBtn').disabled = false; $('connectBtn').textContent = 'Connect'; }
+});
+
+$('disconnectBtn').addEventListener('click', () => {
+  if (device?.gatt?.connected) device.gatt.disconnect();
+});
+
+function onDisconnected() {
+  gatt = null; cwDescChar = null; sensorChar = null;
+  setConnected(false);
+  $('tempVal').textContent = '—';
+  $('notifStatus').textContent = '';
+  log('Device disconnected');
+}
+
+function setConnected(c, label = '') {
+  connected = c;
+  $('connDot').className = 'dot' + (c ? ' dot-ok' : '');
+  $('connLabel').textContent = c ? `connected${label ? ' — ' + label : ''}` : 'disconnected';
+  $('connLabel').style.color = c ? '#22c55e' : '';
+}
+
+// ── Sensor Data handler ───────────────────────────────────────────────────────
+function handleSensorData(event) {
+  const dv = event.target.value;
+  if (!dv || dv.byteLength < 3) return;
+  // Byte layout: flags(uint8) | temp(int16 LE ×0.1°C) | [power(uint16 LE) if flags&0x01]
+  const tempRaw = dv.getUint16(1, true); // little-endian
+  const temp    = tempRaw >= 0x8000 ? tempRaw - 0x10000 : tempRaw;
+  $('tempVal').textContent = (temp / 10).toFixed(1);
+}
+
+// ── Read Cookware Description ─────────────────────────────────────────────────
+$('readDescBtn').addEventListener('click', async () => {
+  if (!cwDescChar) { log('CWD Description char not available — connect first', true); return; }
+  $('readDescBtn').disabled = true;
+  $('cwDescBox').textContent = 'Reading…';
+  try {
+    const dv    = await cwDescChar.readValue();
+    const bytes = new Uint8Array(dv.buffer);
+    const hex   = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    $('cwDescBox').textContent = parseCookwareDesc(hex);
+    log('Cookware Description read OK');
+  } catch (e) {
+    $('cwDescBox').textContent = 'Error: ' + e.message;
+    log(`Read Description error: ${e.message}`, true);
+  } finally { $('readDescBtn').disabled = false; }
+});
+
+// ── Cookware Description parser ───────────────────────────────────────────────
+const COOKWARE_TYPE  = {0x00:'Vessel', 0x01:'Pressure Vessel', 0x02:'Probe', 0x03:'Lid', 0xFF:'Other/Unknown'};
+const COOKWARE_SHAPE = {0x00:'Cylinder', 0x01:'Wok', 0x02:'Elliptic cylinder', 0x03:'Rectangular prism', 0x04:'Stick', 0x05:'Round', 0xFF:'Other/Unknown'};
+
+function parseCookwareDesc(hex) {
+  const bytes = (hex.match(/.{2}/g) || []).map(h => parseInt(h, 16));
+  let i = 0, out = [];
+  if (bytes.length < 5) return 'Invalid data (too short)';
+  const type = bytes[i++], shape = bytes[i++];
+  out.push(`Type:  ${COOKWARE_TYPE[type] || 'RFU'} (0x${type.toString(16).padStart(2, '0')})`);
+  out.push(`Shape: ${COOKWARE_SHAPE[shape] || 'RFU'} (0x${shape.toString(16).padStart(2, '0')})`);
+  const sizeLen = bytes[i++];
+  let sizeStr = '';
+  if (shape === 0x00 && sizeLen === 4) {
+    const h = bytes[i] | (bytes[i+1] << 8), d = bytes[i+2] | (bytes[i+3] << 8);
+    sizeStr = `Height: ${h} mm\nDiameter: ${d} mm`;
+  } else if (shape === 0x01 && sizeLen === 6) {
+    const h = bytes[i]|(bytes[i+1]<<8), dB = bytes[i+2]|(bytes[i+3]<<8), dT = bytes[i+4]|(bytes[i+5]<<8);
+    sizeStr = `Height: ${h} mm\nBase Diam.: ${dB} mm\nTop Diam.: ${dT} mm`;
+  } else if (shape === 0x02 && sizeLen === 6) {
+    const h = bytes[i]|(bytes[i+1]<<8), dM = bytes[i+2]|(bytes[i+3]<<8), dm = bytes[i+4]|(bytes[i+5]<<8);
+    sizeStr = `Height: ${h} mm\nMajor Diam.: ${dM} mm\nMinor Diam.: ${dm} mm`;
+  } else if (shape === 0x03 && sizeLen === 6) {
+    const h = bytes[i]|(bytes[i+1]<<8), l = bytes[i+2]|(bytes[i+3]<<8), w = bytes[i+4]|(bytes[i+5]<<8);
+    sizeStr = `Height: ${h} mm\nLength: ${l} mm\nWidth: ${w} mm`;
+  } else if (shape === 0x04 && sizeLen === 2) {
+    sizeStr = `Length: ${bytes[i]|(bytes[i+1]<<8)} mm`;
+  } else if (shape === 0x05 && sizeLen === 2) {
+    sizeStr = `Diameter: ${bytes[i]|(bytes[i+1]<<8)} mm`;
+  } else {
+    sizeStr = `Size: [${bytes.slice(i, i+sizeLen).map(b=>b.toString(16).padStart(2,'0')).join(' ')}]`;
+  }
+  out.push(sizeStr);
+  i += sizeLen;
+  if (bytes.length >= i + 2) { out.push(`Max Temp: ${((bytes[i]|(bytes[i+1]<<8))/10).toFixed(1)} °C`); i += 2; }
+  if (bytes.length >= i + 2) { const c = bytes[i]|(bytes[i+1]<<8); if(c>0) out.push(`Capacity: ${c} dl`); i += 2; }
+  if (bytes.length >= i + 2) { const h = bytes[i]|(bytes[i+1]<<8); if(h>0&&h!==0xFFFF) out.push(`Heat Cap.: ${h} J/K`); i += 2; }
+  if (bytes.length >= i + 2) {
+    const hu = bytes[i]|(bytes[i+1]<<8); const s = [];
+    if(hu&1)s.push('Induction'); if(hu&2)s.push('Gas'); if(hu&4)s.push('Radiant');
+    if(hu&8)s.push('Thick film'); if(hu&0x8000)s.push('Any');
+    if(s.length) out.push(`Heating Unit: ${s.join(', ')}`);
+  }
+  return out.join('\n');
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+if (!navigator.bluetooth) {
+  $('nobtWarn').style.display = 'block';
+  $('connectBtn').disabled = true;
+  $('connectBtn').title = 'Web Bluetooth not supported in this browser';
+  log('Web Bluetooth not available in this browser/context', true);
+}
+</script>
+</body>
+</html>
